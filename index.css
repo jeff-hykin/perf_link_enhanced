@@ -110,11 +110,12 @@ h3 {
   white-space: nowrap;
 }
 
-svg {
+/* breaks plotly */
+/* svg {
   width: 1.62rem;
   height: 1.62rem;
   fill: rgba(255, 255, 255, 0.38);
-}
+} */
 
 dialog {
   border: 0;

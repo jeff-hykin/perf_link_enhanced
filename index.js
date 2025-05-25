@@ -25,6 +25,10 @@ const defaults = {
     ],
 }
 
+// TODO:
+    // get scaling var into worker
+    // add error output
+
 const init = location.hash
     ? {
           ...defaults,
@@ -37,6 +41,8 @@ const reducer = (state, update) => ({
     ...(typeof update === "function" ? update(state) : update),
 })
 
+import { showToast, showErrorToast } from "https://esm.sh/gh/jeff-hykin/good-component@0.3.5/main/actions/show_toast.js"
+
 const app = () => {
     const [state, dispatch] = useReducer(reducer, init)
     const { before, started, tests, runs, title, id, suites, aside, dimension1Code, dimension2Code } = state
@@ -44,80 +50,125 @@ const app = () => {
     useEffect(() => {
         if (started) {
             setTimeout(() => {
-                ;(async () => {
-                    const checkScript = URL.createObjectURL(new Blob([`
-                        ${before};
-                        onmessage = async (e) => {
-                            const test = e.data[0]
-                            let time
-                            ;(async () => {
-                                try {
-                                    time = await eval(\`async () => {
-                                        const start = Date.now()
-                                        for (let i = 0; i < 10; i++) {
-                                            \${test.code};
+                ;(async () => { // idk why so much nesting is needed (maybe try removing later) -- Jeff
+                    let dimension1 = []
+                    try {
+                        dimension1 = eval(dimension1Code || "[]")
+                    } catch (error) {
+                        showErrorToast(`When trying to eval dimension1, an error was thrown: ${error.message}`)
+                    }
+                    let dimension2 = []
+                    try {
+                        dimension2 = eval(dimension2Code || "[]")
+                    } catch (error) {
+                        showErrorToast(`When trying to eval dimension2, an error was thrown: ${error.message}`)
+                    }
+                    const dim1Empty = (!(dimension1 instanceof Array) || dimension1.length === 0)
+                    const dim2Empty = (!(dimension2 instanceof Array) || dimension2.length === 0)
+                    if (dim1Empty) {
+                        dimension1 = [null]
+                    }
+                    if (dim2Empty) {
+                        dimension2 = [null]
+                    }
+                    let resultsPerCondition = []
+                    for (const dimension1Value of dimension1) {
+                        for (const dimension2Value of dimension2) {
+                            const dimensionResults = []
+                            resultsPerCondition.push([
+                                [dimension1Value, dimension2Value],
+                                dimensionResults,
+                            ])
+                            const checkScript = URL.createObjectURL(new Blob([`
+                                ${before};
+                                onmessage = async (e) => {
+                                    const test = e.data[0]
+                                    const dimension1Value = ${JSON.stringify(dimension1Value)}
+                                    const dimension2Value = ${JSON.stringify(dimension2Value)}
+                                    let time
+                                    ;(async () => {
+                                        try {
+                                            time = await eval(\`async () => {
+                                                const start = Date.now()
+                                                for (let i = 0; i < 10; i++) {
+                                                    \${test.code};
+                                                }
+                                                return Date.now() - start || 1
+                                            }\`)()
+                                        } catch (e) {
+                                            time = -1
                                         }
-                                        return Date.now() - start || 1
-                                    }\`)()
-                                } catch (e) {
-                                    time = -1
+                                        postMessage(time)
+                                    })()
                                 }
-                                postMessage(time)
-                            })()
-                        }
-                    `], { type: 'application/javascript' }))
-                    const runScript = URL.createObjectURL(new Blob([`
-                        ${before};
-                        onmessage = async (e) => {
-                            const test = e.data[0]
-                            const duration = e.data[1]
-                            let result
-                            ;(async () => {
-                                try {
-                                    result = await eval(\`async () => {
-                                        let ops = 0;
-                                        let end = Date.now() + \${duration};
-                                        while (Date.now() < end) {
-                                            \${test.code};
-                                            ops++;
+                            `], { type: 'application/javascript' }))
+                            const runScript = URL.createObjectURL(new Blob([`
+                                ${before};
+                                onmessage = async (e) => {
+                                    const test = e.data[0]
+                                    const duration = e.data[1]
+                                    const dimension1Value = ${JSON.stringify(dimension1Value)}
+                                    const dimension2Value = ${JSON.stringify(dimension2Value)}
+                                    let result
+                                    ;(async () => {
+                                        try {
+                                            result = await eval(\`async () => {
+                                                let ops = 0;
+                                                let end = Date.now() + \${duration};
+                                                while (Date.now() < end) {
+                                                    \${test.code};
+                                                    ops++;
+                                                }
+                                                return ops;
+                                            }\`)()
+                                        } catch (e) {
+                                            result = -1
                                         }
-                                        return ops;
-                                    }\`)()
-                                } catch (e) {
-                                    result = -1
+                                        postMessage(result === -1 ? result : (result * (1000 / duration)) << 0)
+                                    })()
                                 }
-                                postMessage(result === -1 ? result : (result * (1000 / duration)) << 0)
-                            })()
-                        }
-                    `], { type: 'application/javascript' }))
-                    
-                    const duration = await Promise.all(
-                        tests.map(
-                            (test) =>
+                            `], { type: 'application/javascript' }))
+                            
+                            const duration = await Promise.all(
+                                tests.map(
+                                    (test) =>
+                                        new Promise((resolve) => {
+                                            const worker = new Worker(checkScript, { type: "module" })
+                                            worker.onmessage = (e) => {
+                                                resolve(e.data)
+                                                worker.terminate()
+                                            }
+                                            worker.postMessage([test])
+                                        })
+                                )
+                            )
+                            const bench = (test) =>
                                 new Promise((resolve) => {
-                                    const worker = new Worker(checkScript, { type: "module" })
+                                    const worker = new Worker(runScript, { type: "module" })
                                     worker.onmessage = (e) => {
-                                        resolve(e.data)
+                                        resolve({ ...test, ops: e.data })
                                         worker.terminate()
                                     }
-                                    worker.postMessage([test])
+                                    // TODO: is max really the right metric here? -- Jeff
+                                    worker.postMessage([test, Math.max(...duration)])
                                 })
-                        )
-                    )
-                    const bench = (test) =>
-                        new Promise((resolve) => {
-                            const worker = new Worker(runScript, { type: "module" })
-                            worker.onmessage = (e) => {
-                                resolve({ ...test, ops: e.data })
-                                worker.terminate()
+                            const tasks = () => () => {
+                                dispatch(updateProgress)
+                                return Promise.all(tests.map(bench))
                             }
-                            worker.postMessage([test, Math.max(...duration)])
-                        })
-                    const tasks = () => () => {
-                        dispatch(updateProgress)
-                        return Promise.all(tests.map(bench))
+                            pSeries(Array.from({ length: runs }, tasks)).then((results) =>{
+                                const testResults = average(results.flat())
+                                for (let each of testResults) {
+                                    dimensionResults.push(each)
+                                }
+                                // dimensionResults
+                                return dispatch({ tests: testResults, started: false })
+                            })
+                        }
                     }
-                    pSeries(Array.from({ length: runs }, tasks)).then((results) => dispatch({ tests: average(results.flat()), started: false }))
+                    // TODO: plot these
+                    dispatch({ resultsPerCondition })
+                    // console.debug(`resultsPerCondition`, resultsPerCondition)
                 })()
             }, 300)
         }
