@@ -1,3 +1,4 @@
+import "./library/prism.js"
 import { html, preact, uid, pSeries, average, startTesting, latestLocalStorage, updateProgress, extractValidSuites, decodeState } from "./utils.js"
 
 import Tests from "./components/tests.js"

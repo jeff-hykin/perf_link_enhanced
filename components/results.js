@@ -153,8 +153,6 @@ export default ({ state, dispatch }) => {
     const updatePlot = () => {
         if (document.getElementById(id)) {
             Plotly.newPlot(id, traces, {
-                xaxis: { title: "Dimension1" },
-                yaxis: { title: "Number of Ops (higher is better)" },
                 legend: {
                     orientation: 'h',    // horizontal layout
                     yanchor: 'bottom',   // anchor legend box to bottom of the legend
@@ -175,7 +173,7 @@ export default ({ state, dispatch }) => {
                 },
                 yaxis: {
                     type: yUseLogScale ? 'log' : 'linear',
-                    title: { text: 'Number of Ops', font: { color: '#acacae' } },
+                    title: { text: 'Number of Ops (higher is better)', font: { color: '#acacae' } },
                     tickfont: { color: '#acacae' },
                     gridcolor: '#2f3037'
                 },
