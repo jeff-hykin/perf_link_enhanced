@@ -149,7 +149,7 @@ export default ({ state, dispatch }) => {
 
     // Plot the chart
     const id = `plotly-graph-${Math.random()}`
-    let element = html`<div style="margin-bottom: -3rem" id=${id}></div>`
+    let element = html`<div style="margin-bottom: -1rem" id=${id}></div>`
     const updatePlot = () => {
         if (document.getElementById(id)) {
             Plotly.newPlot(id, traces, {
@@ -203,7 +203,7 @@ export default ({ state, dispatch }) => {
         value=${title}
       />
       ${element}
-      <div style="position: absolute; bottom: -1rem; left: 1rem; color: gray;" >
+      <div style="position: absolute; bottom: 0rem; left: 1rem; color: gray;" >
         <div>
           <input type="checkbox" checked="${xUseLogScale}" onChange=${(e) =>{xUseLogScale = e.target.checked;updatePlot()}}/>
           <span> </span>
