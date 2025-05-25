@@ -154,7 +154,7 @@ export default ({ state, dispatch }) => {
         if (document.getElementById(id)) {
             Plotly.newPlot(id, traces, {
                 xaxis: { title: "Dimension1" },
-                yaxis: { title: "Number of Ops" },
+                yaxis: { title: "Number of Ops (higher is better)" },
                 legend: {
                     orientation: 'h',    // horizontal layout
                     yanchor: 'bottom',   // anchor legend box to bottom of the legend
