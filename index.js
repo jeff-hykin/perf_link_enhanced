@@ -1,4 +1,4 @@
-import { html, preact, uid, pSeries, average, fetchWorkerScript, startTesting, latestLocalStorage, updateProgress, extractValidSuites, decodeState } from "./utils.js"
+import { html, preact, uid, pSeries, average, startTesting, latestLocalStorage, updateProgress, extractValidSuites, decodeState } from "./utils.js"
 
 import Tests from "./components/tests.js"
 import Archive from "./components/archive.js"
@@ -45,8 +45,52 @@ const app = () => {
         if (started) {
             setTimeout(() => {
                 ;(async () => {
-                    const checkScript = await fetchWorkerScript(before, "check")
-                    const runScript = await fetchWorkerScript(before, "run")
+                    const checkScript = URL.createObjectURL(new Blob([`
+                        ${before};
+                        onmessage = async (e) => {
+                            const test = e.data[0]
+                            let time
+                            ;(async () => {
+                                try {
+                                    time = await eval(\`async () => {
+                                        const start = Date.now()
+                                        for (let i = 0; i < 10; i++) {
+                                            \${test.code};
+                                        }
+                                        return Date.now() - start || 1
+                                    }\`)()
+                                } catch (e) {
+                                    time = -1
+                                }
+                                postMessage(time)
+                            })()
+                        }
+                    `], { type: 'application/javascript' }))
+                    const runScript = URL.createObjectURL(new Blob([`
+                        ${before};
+                        onmessage = async (e) => {
+                            const test = e.data[0]
+                            const duration = e.data[1]
+                            let result
+                            ;(async () => {
+                                try {
+                                    result = await eval(\`async () => {
+                                        let ops = 0;
+                                        let end = Date.now() + \${duration};
+                                        while (Date.now() < end) {
+                                            \${test.code};
+                                            ops++;
+                                        }
+                                        return ops;
+                                    }\`)()
+                                } catch (e) {
+                                    result = -1
+                                }
+                                postMessage(result === -1 ? result : (result * (1000 / duration)) << 0)
+                            })()
+                        }
+                    `], { type: 'application/javascript' }))
+                    
                     const duration = await Promise.all(
                         tests.map(
                             (test) =>

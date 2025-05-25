@@ -81,9 +81,6 @@ export const average = (arr) => {
   return results
 }
 
-export const toURL = (code, type = 'application/javascript') =>
-  URL.createObjectURL(new Blob([code], { type }))
-
 export const timeSince = (date) => {
   const seconds = Math.floor((new Date() - date) / 1000)
   let interval = Math.floor(seconds / 31536000)
@@ -107,12 +104,6 @@ export const extractValidSuites = (o) =>
     } catch (e) {}
     return suite.before && suite.tests ? [...a, [k, suite]] : a
   }, [])
-
-export const fetchWorkerScript = (before, url) =>
-  fetch(`./${url}.js`)
-    .then((res) => res.text())
-    .then((x) => before + ';' + x)
-    .then(toURL)
 
 export const startTesting = (state) => ({
   tests: state.tests.map((test) => ({ ...test, ops: 0 })),
