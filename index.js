@@ -80,11 +80,11 @@ const app = () => {
                                 dimensionResults,
                             ])
                             const checkScript = URL.createObjectURL(new Blob([`
+                                const dimension1Value = ${JSON.stringify(dimension1Value)}
+                                const dimension2Value = ${JSON.stringify(dimension2Value)}
                                 ${before};
                                 onmessage = async (e) => {
                                     const test = e.data[0]
-                                    const dimension1Value = ${JSON.stringify(dimension1Value)}
-                                    const dimension2Value = ${JSON.stringify(dimension2Value)}
                                     let time
                                     ;(async () => {
                                         try {
@@ -103,12 +103,12 @@ const app = () => {
                                 }
                             `], { type: 'application/javascript' }))
                             const runScript = URL.createObjectURL(new Blob([`
+                                const dimension1Value = ${JSON.stringify(dimension1Value)}
+                                const dimension2Value = ${JSON.stringify(dimension2Value)}
                                 ${before};
                                 onmessage = async (e) => {
                                     const test = e.data[0]
                                     const duration = e.data[1]
-                                    const dimension1Value = ${JSON.stringify(dimension1Value)}
-                                    const dimension2Value = ${JSON.stringify(dimension2Value)}
                                     let result
                                     ;(async () => {
                                         try {
@@ -172,7 +172,7 @@ const app = () => {
                 })()
             }, 300)
         }
-    }, [started, before, tests])
+    }, [started, before, tests, dimension1Code, dimension2Code])
 
     useEffect(() => {
         const x = JSON.stringify({ id, title, before, tests, updated: new Date(), dimension1Code, dimension2Code })

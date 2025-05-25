@@ -32,7 +32,8 @@ const Bar = tests => (test, i) => {
   `
 }
 
-
+let xUseLogScale = true
+let yUseLogScale = false
 export default ({ state, dispatch }) => {
   const { tests, title, started, resultsPerCondition } = state
     var resultsPerConditionExample = [
@@ -149,8 +150,7 @@ export default ({ state, dispatch }) => {
     // Plot the chart
     const id = `plotly-graph-${Math.random()}`
     let element = html`<div style="margin-bottom: -3rem" id=${id}></div>`
-    setTimeout(() => {
-        console.debug(`document.getElementById(id) is:`,document.getElementById(id))
+    const updatePlot = () => {
         if (document.getElementById(id)) {
             Plotly.newPlot(id, traces, {
                 xaxis: { title: "Dimension1" },
@@ -168,11 +168,13 @@ export default ({ state, dispatch }) => {
                 //     font: { color: '#acacae' }
                 // },
                 xaxis: {
+                    type: xUseLogScale ? 'log' : 'linear',
                     title: { text: 'Dimension1', font: { color: '#acacae' } },
                     tickfont: { color: '#acacae' },
                     gridcolor: '#2f3037'
                 },
                 yaxis: {
+                    type: yUseLogScale ? 'log' : 'linear',
                     title: { text: 'Number of Ops', font: { color: '#acacae' } },
                     tickfont: { color: '#acacae' },
                     gridcolor: '#2f3037'
@@ -189,7 +191,8 @@ export default ({ state, dispatch }) => {
                 }
             })
         }
-    }, 300)
+    }
+    setTimeout(() => updatePlot(), 300)
 
   return html`
     <aside className=${style.aside}>
@@ -202,6 +205,18 @@ export default ({ state, dispatch }) => {
         value=${title}
       />
       ${element}
+      <div style="position: absolute; bottom: -1rem; left: 1rem; color: gray;" >
+        <div>
+          <input type="checkbox" checked="${xUseLogScale}" onChange=${(e) =>{xUseLogScale = e.target.checked;updatePlot()}}/>
+          <span> </span>
+          <span>X-axis log scale</span>
+        </div>
+        <div style="margin-left: 0;">
+          <input type="checkbox" checked="${yUseLogScale}" onChange=${(e) =>{yUseLogScale = e.target.checked;updatePlot()}}/>
+          <span> </span>
+          <span>Y-axis log scale</span>
+        </div>
+      </div>
     </aside>
   `
 }
