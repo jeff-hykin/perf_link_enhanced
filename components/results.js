@@ -197,12 +197,10 @@ export default ({ state, dispatch }) => {
         ${tests.filter(x => x.ops !== -2).map(Bar(tests))}
       </div>
       <input
-        disabled=${started}
         className=${style.title}
         onInput=${e => dispatch({ title: e.target.value })}
         value=${title}
       />
-      
       ${element}
     </aside>
   `
