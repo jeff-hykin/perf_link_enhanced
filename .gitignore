@@ -1,4 +1,10 @@
 # 
+# custom
+# 
+.netlify/
+.now
+
+# 
 # standard
 # 
 **/*.do_not_sync
