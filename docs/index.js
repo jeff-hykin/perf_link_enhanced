@@ -3157,7 +3157,7 @@ var init_show_toast = __esm({
       function j2(o5, c5, l5) {
         var y4 = "";
         if (Array.isArray(l5)) for (var x3 = 0; x3 < l5.length; x3++) y4 += E3(o5, c5, l5[x3]) + ";";
-        else for (varr m4 in l5) {
+        else for (var m4 in l5) {
           var T3 = l5[m4];
           if (typeof T3 != "object") c5 != null && c5[T3] !== void 0 ? y4 += m4 + "{" + c5[T3] + "}" : g4(T3) && (y4 += d4(m4) + ":" + b2(m4, T3) + ";");
           else if (Array.isArray(T3) && typeof T3[0] == "string" && (c5 == null || c5[T3[0]] === void 0)) for (var M2 = 0; M2 < T3.length; M2++) g4(T3[M2]) && (y4 += d4(m4) + ":" + b2(m4, T3[M2]) + ";");
