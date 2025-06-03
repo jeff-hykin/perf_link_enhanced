@@ -34,7 +34,13 @@ export default ({ state, dispatch }) => {
                     <small style="font-weight: 100">If you want to see how performance scales as sizes/values change, use this section</small>
                 </h3>
             </div>
-            <${Editor} value=${scaleMessagePrefix("1")+(dimension1Code||"[]")+scaleMessagePostfix("1")} onValueChange=${(dimension1Code) => dispatch({ dimension1Code: dimension1Code.slice(scaleMessagePrefix("1").length, -scaleMessagePostfix("1").length) })} highlight=${highlightCode} padding=${20} style=${style.editor} />
+            <${Editor}
+                value=${scaleMessagePrefix("1")+(dimension1Code||"[100,1000,10000]")+scaleMessagePostfix("1")}
+                onValueChange=${(dimension1Code) => dispatch({ dimension1Code: dimension1Code.slice(scaleMessagePrefix("1").length, -scaleMessagePostfix("1").length) })}
+                highlight=${highlightCode}
+                padding=${20}
+                style=${style.editor}
+                />
             ${""/*<${Editor} value=${scaleMessagePrefix("2")+(dimension2Code||"[]")+scaleMessagePostfix("2")} onValueChange=${(dimension2Code) => dispatch({ dimension2Code: dimension2Code.slice(scaleMessagePrefix("1").length, -scaleMessagePostfix("1").length) })} highlight=${highlightCode} padding=${20} style=${style.editor} />*/}
             <div className=${style.testToolbar}>
                 <h3>Globals</h3>

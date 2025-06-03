@@ -4,6 +4,12 @@ import { html, preact, uid, pSeries, average, startTesting, latestLocalStorage, 
 import Tests from "./components/tests.js"
 import Archive from "./components/archive.js"
 import Results from "./components/results.js"
+// import { convertImports } from "./library/parsing.js"
+import { convertImports } from "./library/parsing.bundle.js"
+// var convertImports = (x) => x
+import { showToast, showErrorToast } from "https://esm.sh/gh/jeff-hykin/good-component@0.3.5/main/actions/show_toast.js"
+globalThis.showToast = showToast
+globalThis.showErrorToast = showErrorToast
 
 const { render, useReducer, useEffect } = preact
 const defaults = {
@@ -16,8 +22,8 @@ const defaults = {
     progress: 0,
     id: uid(),
     searchTerm: "",
-    title: "Finding numbers in an array of 1000",
-    before: `const data = [...Array(1000).keys()]`,
+    title: "Finding numbers",
+    before: `import { randomSelectElementAndIndex } from 'https://esm.sh/gh/jeff-hykin/good-js@1.17.1.0/source/flattened/random_select_element_and_index.js'\nconst data = [...Array(dimension1Value).keys()]\nconst { value: randomValue, index: randomIndex } = randomSelectElementAndIndex(data)`,
     tests: [
         { name: "Find item 100", code: "data.find(x => x == 100)", ops: 203360 },
         { name: "Find item 200", code: "data.find(x => x == 200)", ops: 99560 },
@@ -42,7 +48,6 @@ const reducer = (state, update) => ({
     ...(typeof update === "function" ? update(state) : update),
 })
 
-import { showToast, showErrorToast } from "https://esm.sh/gh/jeff-hykin/good-component@0.3.5/main/actions/show_toast.js"
 
 const app = () => {
     const [state, dispatch] = useReducer(reducer, init)
@@ -52,17 +57,20 @@ const app = () => {
         if (started) {
             setTimeout(() => {
                 ;(async () => { // idk why so much nesting is needed (maybe try removing later) -- Jeff
+                    
                     let dimension1 = []
                     try {
                         dimension1 = eval(dimension1Code || "[]")
                     } catch (error) {
                         showErrorToast(`When trying to eval dimension1, an error was thrown: ${error.message}`)
+                        return dispatch({ started: false })
                     }
                     let dimension2 = []
                     try {
                         dimension2 = eval(dimension2Code || "[]")
                     } catch (error) {
                         showErrorToast(`When trying to eval dimension2, an error was thrown: ${error.message}`)
+                        return dispatch({ started: false })
                     }
                     const dim1Empty = (!(dimension1 instanceof Array) || dimension1.length === 0)
                     const dim2Empty = (!(dimension2 instanceof Array) || dimension2.length === 0)
@@ -72,6 +80,11 @@ const app = () => {
                     if (dim2Empty) {
                         dimension2 = [null]
                     }
+                    const {code:globalSectionCode, syntaxErrors} = convertImports(before)
+                    if (syntaxErrors.length > 0) {
+                        showErrorToast(`Syntax errors in the global section:\n${syntaxErrors.map(x=>x.text).join("\n")}`)
+                        return dispatch({ started: false })
+                    }
                     let resultsPerCondition = []
                     for (const dimension1Value of dimension1) {
                         for (const dimension2Value of dimension2) {
@@ -80,82 +93,128 @@ const app = () => {
                                 [dimension1Value, dimension2Value],
                                 dimensionResults,
                             ])
-                            const checkScript = URL.createObjectURL(new Blob([`
+                            const numberOfLineBeforeEvalCode = 9
+                            const setup = ({isCheckScript=false})=>`
+                                const isCheckScript = ${JSON.stringify(isCheckScript)}
                                 const dimension1Value = ${JSON.stringify(dimension1Value)}
                                 const dimension2Value = ${JSON.stringify(dimension2Value)}
-                                ${before};
-                                onmessage = async (e) => {
-                                    const test = e.data[0]
-                                    let time
-                                    ;(async () => {
-                                        try {
-                                            time = await eval(\`async () => {
-                                                const start = Date.now()
-                                                for (let i = 0; i < 10; i++) {
-                                                    \${test.code};
-                                                }
-                                                return Date.now() - start || 1
-                                            }\`)()
-                                        } catch (e) {
-                                            time = -1
-                                        }
-                                        postMessage(time)
-                                    })()
+                                // setup onmessage hook immediately
+                                let resolvePromiseOfCallbackSetup 
+                                let promiseOfCallbackSetup = new Promise((res,rej)=>{resolvePromiseOfCallbackSetup=res})
+                                let callbackForTestRequest=()=>{}
+                                onmessage = async (messageFromHost) => {
+                                    await promiseOfCallbackSetup; callbackForTestRequest(messageFromHost)
+                                    // replace self for future requests
+                                    onmessage = callbackForTestRequest
                                 }
-                            `], { type: 'application/javascript' }))
-                            const runScript = URL.createObjectURL(new Blob([`
-                                const dimension1Value = ${JSON.stringify(dimension1Value)}
-                                const dimension2Value = ${JSON.stringify(dimension2Value)}
-                                ${before};
-                                onmessage = async (e) => {
-                                    const test = e.data[0]
-                                    const duration = e.data[1]
-                                    let result
-                                    ;(async () => {
+                                var require = (x) => import(x)
+                                let section = "globals"
+                                await eval(${JSON.stringify(`((async ()=>{
+                                    try {
+                                        ${globalSectionCode};
                                         try {
-                                            result = await eval(\`async () => {
-                                                let ops = 0;
-                                                let end = Date.now() + \${duration};
-                                                while (Date.now() < end) {
-                                                    \${test.code};
-                                                    ops++;
+                                            if (isCheckScript) {
+                                                callbackForTestRequest = (messageFromHost) => {
+                                                    const testObject = messageFromHost.data[0]
+                                                    let time
+                                                    ;(async () => {
+                                                        try {
+                                                            time = await eval(\`async () => {
+                                                                const start = Date.now()
+                                                                for (let i = 0; i < 10; i++) {
+                                                                    \${testObject.code};
+                                                                }
+                                                                return Date.now() - start || 1
+                                                            }\`)()
+                                                            postMessage(time)
+                                                        } catch (e) {
+                                                            postMessage({errorSection: "one of the test cases", errorMessage: \`\${e.message}\`, errorStack: \`\${e.stack}\`})
+                                                        }
+                                                    })()
                                                 }
-                                                return ops;
-                                            }\`)()
-                                        } catch (e) {
-                                            result = -1
+                                            // run script
+                                            } else {
+                                                callbackForTestRequest = (messageFromHost) => {
+                                                    const testObject = messageFromHost.data[0]
+                                                    const duration = messageFromHost.data[1]
+                                                    let result
+                                                    ;((async () => {
+                                                        try {
+                                                            result = await eval(\`async () => {
+                                                                let ops = 0;
+                                                                let end = Date.now() + \${duration};
+                                                                while (Date.now() < end) {
+                                                                    \${testObject.code};
+                                                                    ops++;
+                                                                }
+                                                                return ops;
+                                                            }\`)()
+                                                            postMessage((result * (1000 / duration)) << 0)
+                                                        } catch (e) {
+                                                            postMessage({errorSection: "one of the test cases", errorMessage: \`\${e.message}\`, errorStack: \`\${e.stack}\`})
+                                                        }
+                                                    })())
+                                                }
+                                            }
+                                        } catch (error) {
+                                            postMessage({errorSection: "one of the test cases", errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
+                                            return
                                         }
-                                        postMessage(result === -1 ? result : (result * (1000 / duration)) << 0)
-                                    })()
+                                        section = "one of the test cases"
+                                        resolvePromiseOfCallbackSetup()
+                                    } catch (error) {
+                                        postMessage({errorSection: "globals", errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
+                                        return
+                                    }
+                                })())`)}).catch((error)=>{
+                                    postMessage({errorSection: section, errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
+                                })
+                            `
+                            const checkScript = URL.createObjectURL(new Blob([setup({isCheckScript:true})], { type: 'application/javascript' }))
+                            const runScript = URL.createObjectURL(new Blob([setup({isCheckScript:false})], { type: 'application/javascript' }))
+                            const checkAndHandleWorkerError = (message) => {
+                                if (message.data.errorMessage) {
+                                    let chop 
+                                    if (message.data.errorSection === "globals") {
+                                        chop = numberOfLineBeforeEvalCode
+                                    } else {
+                                        chop = numberOfLineBeforeEvalCode+16
+                                    }
+                                    let stackFixed = ((message.data.errorStack||"").match(/:\d+:\d+$/gm)||"").at(-1).split(":").map((x,i)=>i==1?x-chop:x).slice(0,-2).join(":")
+                                    const error= "error: " + message.data.errorMessage+"\nfrom "+message.data.errorSection+stackFixed
+                                    showErrorToast(error)
+                                    dispatch({ started: false })
+                                    throw Error(error)
                                 }
-                            `], { type: 'application/javascript' }))
-                            
-                            const duration = await Promise.all(
+                            }
+                            const durations = await Promise.all(
                                 tests.map(
-                                    (test) =>
+                                    (testObject) =>
                                         new Promise((resolve) => {
                                             const worker = new Worker(checkScript, { type: "module" })
-                                            worker.onmessage = (e) => {
-                                                resolve(e.data)
+                                            worker.onmessage = (message) => {
+                                                checkAndHandleWorkerError(message)
+                                                resolve(message.data)
                                                 worker.terminate()
                                             }
-                                            worker.postMessage([test])
+                                            worker.postMessage([testObject])
                                         })
                                 )
                             )
-                            const bench = (test) =>
-                                new Promise((resolve) => {
-                                    const worker = new Worker(runScript, { type: "module" })
-                                    worker.onmessage = (e) => {
-                                        resolve({ ...test, ops: e.data })
-                                        worker.terminate()
-                                    }
-                                    // TODO: is max really the right metric here? -- Jeff
-                                    worker.postMessage([test, Math.max(...duration)])
-                                })
                             const tasks = () => () => {
                                 dispatch(updateProgress)
-                                return Promise.all(tests.map(bench))
+                                return Promise.all(tests.map((testObject) =>
+                                    new Promise((resolve) => {
+                                        const worker = new Worker(runScript, { type: "module" })
+                                        worker.onmessage = (message) => {
+                                            checkAndHandleWorkerError(message)
+                                            resolve({ ...testObject, ops: message.data })
+                                            worker.terminate()
+                                        }
+                                        // TODO: is max really the right metric here? -- Jeff
+                                        worker.postMessage([testObject, Math.max(...durations)])
+                                    })
+                                ))
                             }
                             pSeries(Array.from({ length: runs }, tasks)).then((results) =>{
                                 const testResults = average(results.flat())
@@ -167,9 +226,7 @@ const app = () => {
                             })
                         }
                     }
-                    // TODO: plot these
                     dispatch({ resultsPerCondition })
-                    // console.debug(`resultsPerCondition`, resultsPerCondition)
                 })()
             }, 300)
         }
