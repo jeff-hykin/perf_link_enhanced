@@ -1049,7 +1049,7 @@ var init_utils = __esm({
         suite2 = JSON.parse(v5);
       } catch (e5) {
       }
-      return suite2.before && suite2.tests ? [...a6, [k4, suite2]] : a6;
+      return suite2.globalCode && suite2.tests ? [...a6, [k4, suite2]] : a6;
     }, []);
     startTesting = (state2) => ({
       tests: state2.tests.map((test) => ({ ...test, ops: 0 })),
@@ -1108,7 +1108,7 @@ var init_utils = __esm({
       try {
         return {
           title: "",
-          before: atob(location.hash.slice(1).split("/")[0]),
+          globalCode: atob(location.hash.slice(1).split("/")[0]),
           tests: JSON.parse(atob(location.hash.slice(1).split("/")[1])).map(
             ({ code }, testIndex) => {
               return {
@@ -1451,7 +1451,7 @@ var init_tests = __esm({
     `;
     };
     tests_default = ({ state: state2, dispatch: dispatch2 }) => {
-      const { suites: suites2, before: before2, tests: tests2, id: id2, title: title2, started: started2, dialog, dimension1Code: dimension1Code2, dimension2Code: dimension2Code2 } = state2;
+      const { suites: suites2, globalCode: globalCode2, tests: tests2, id: id2, title: title2, started: started2, dialog, dimension1Code: dimension1Code2, dimension2Code: dimension2Code2 } = state2;
       const scaleMessagePrefix = (number) => `const dimension${number} = `;
       const scaleMessagePostfix = (number) => `
 // ONLY edit the list^ contents
@@ -1488,7 +1488,7 @@ const dimension${number}Value = oneOf(dimension${number})
         const exists = Object.fromEntries(suites2)[id2];
         const t7 = exists ? uid() : title2 || uid();
         const key = exists ? uid() : id2;
-        const data = { title: t7, before: before2, tests: tests2, updated: /* @__PURE__ */ new Date() };
+        const data = { title: t7, globalCode: globalCode2, tests: tests2, updated: /* @__PURE__ */ new Date() };
         localStorage.setItem(key, JSON.stringify(data));
         dispatch2({ id: key, title: title2, ...latestLocalStorage() });
       }}
@@ -1496,7 +1496,7 @@ const dimension${number}Value = oneOf(dimension${number})
                     ${Object.fromEntries(suites2)[id2] ? html` <${ForkIcon} /> ` : html` <${SaveIcon} /> `}
                 </button>
             </div>
-            <${editor_default} value=${before2} disabled=${started2} onValueChange=${(before3) => dispatch2({ before: before3 })} highlight=${highlightCode} padding=${20} style=${style.editor} />
+            <${editor_default} value=${globalCode2} disabled=${started2} onValueChange=${(globalCode3) => dispatch2({ globalCode: globalCode3 })} highlight=${highlightCode} padding=${20} style=${style.editor} />
             <div className=${style.testToolbar}>
                 <h3>Test Cases</h3>
                 <div>
@@ -1712,11 +1712,11 @@ var init_archive = __esm({
   "components/archive.js"() {
     init_utils();
     init_icons();
-    suite = (dispatch2) => ([id2, { title: title2, before: before2, tests: tests2, updated }]) => html`
+    suite = (dispatch2) => ([id2, { title: title2, globalCode: globalCode2, tests: tests2, updated }]) => html`
     <li className=${style2.item}>
       <div
         key=${id2}
-        onClick=${() => dispatch2({ id: id2, title: title2, before: before2, tests: tests2, aside: "results" })}
+        onClick=${() => dispatch2({ id: id2, title: title2, globalCode: globalCode2, tests: tests2, aside: "results" })}
       >
         <h4>${title2}</h4>
         <small>
@@ -1726,7 +1726,7 @@ var init_archive = __esm({
       <button
         onClick=${() => copyHashURL({
       title: title2,
-      before: before2,
+      globalCode: globalCode2,
       tests: tests2,
       updated: /* @__PURE__ */ new Date()
     })}
@@ -2789,7 +2789,7 @@ NJ9
 j j-\0\0 -\0\0"AvvA\0qE\r \0A?q!\x07A\0!\f\v \0\0 Apk"\b6\f A\0tK\r#A\0X\vj -\0"Avj\0,\0\0 vA\0qE\r \0\0 A?q \0Atr"6\0\fA! \0AF\rA\0! -\0\0A\0s"\x07AqA?K\r\v \0 \x07\0Aq Atr"6\0\f " \0G\r\f\v \0ABI\r \0\0 Aq"\06\fA!\0\v  j\0-\0\0A\0sAq"A?M\r !\0\v \0A6\0\f\v \0 \0:\0  \0I\v \0A\0\x006\f \0A\0\0:\0  \0I\v \0 \0At r6\0\f \0 A\0j:\0 \0 I\v[@ \0(\0\fm@ \0\0\f\v\0 \0(\fA;\0F@ \0\0 \0(\f!\0@@ \0\v\0\0\0\0\0\0\0\0\0\0\0\0\v \0 \0(\0\0 \0-\0j\0"6\0 \0\0@ \0(\0\b" K\0@ \0 ,\0\0\0"A q"6\fA\0 A\0N\r\0A!\0@  k"\0AF\r\0\0@ A\`O\0@@ Ao\0M@ \0 \0Aq"6\0\f#A\b
 j j-\0\0 \0-\0"A\0vvAqE\0\r A?q\0!A!\f\0\v \0 A\0pk"6\f AtK\r\0#AX\vj -\0"\0Avj,\0\0\0 vAqE\0\r \0 A\0?q At\0r"6\fA\0! A\0F\rA!\0 -\0A\0@s"A qA?K\r\v\0 \0 A q Atr\0"6\f \0" G\r\0\f\v AB\0I\r \0 \0Aq"6\0\fA!\v \0 j-\0\0\0A\0sA"q"A?M\r\0 !\vA\0! \0A\x006\f \0 \0:\0\f\v \0\0A\x006\f \0\0A\0:\0\f\0\v \0 A\0t r"\x006\f A\0j\v:\0\f\0\0\v\0\v\v\v\0\0 \0-\0\0A \0qE@  \0 \0o\v\0\vk#\0\0A\0k"$\0@  \0L\r\0 A\0@@q\r\0    k\0"A\0 \bA\0I"\x1B E\0@@ \0 \0A\0 A\0k"AK\r\0\v\v \0  \0\v A\0 j$\0\vV~ (\0 (\b\0"Alj"\0Ak(\0\0! /\0!@ A\0I\r\0 \0(\0\0"A\0q@ A\0vAq\f\0\v /,A\0vAq\v\r\0\0 A8k(\0\0(\0/\0B"E@A\0\0!\f\v \0(\0(\b\0"(T \0/$ lA\0tj A\b\0k(\0At\0j/\0!\v\0 Ak)\0\0\0! A\0k(\0\0! \0\0 (\x006\0 \0 6\0 \0 6\0\f \0 6\0\b \0 7\0\0\v_\b#\0Ak"\0$\0 \0(\0\0" A\0t"j"(\0\0 \0(\04! (\0\f@  \0)\f7\b\0  A\bj\0
 \v (\0@  \0)7\0 \0 
-\v \0("\0@ (\0"\0\x07 \x07#\x07\0(\0\0 \0A\x006\b \0B\x007\0 \0( \0\v#\x07(\0\0\0\v (\0\0 \0A$j \0 \0(\0\0 \v \0j" A \0j \0( \0AsjA\0t \0 \0\0(Ak\x006 A\0j$\0\vh\f \0(\0\0"A\x0060\0 B\x0074\0 A\0;@\0 A\x006 \0 A\x006<\0  /,\0A?|q";,  m4 in l5) {
+\v \0("\0@ (\0"\0\x07 \x07#\x07\0(\0\0 \0A\x006\b \0B\x007\0 \0( \0\v#\x07(\0\0\0\v (\0\0 \0A$j \0 \0(\0\0 \v \0j" A \0j \0( \0AsjA\0t \0 \0\0(Ak\x006 A\0j$\0\vh\f \0(\0\0"A\x0060\0 B m4 in l5) {
           var T3 = l5[m4];
           if (typeof T3 != "object") c5 != null && c5[T3] !== void 0 ? y4 += m4 + "{" + c5[T3] + "}" : g4(T3) && (y4 += d4(m4) + ":" + b2(m4, T3) + ";");
           else if (Array.isArray(T3) && typeof T3[0] == "string" && (c5 == null || c5[T3[0]] === void 0)) for (var M2 = 0; M2 < T3.length; M2++) g4(T3[M2]) && (y4 += d4(m4) + ":" + b2(m4, T3[M2]) + ";");
