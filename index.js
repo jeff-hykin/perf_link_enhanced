@@ -30,6 +30,7 @@ const defaults = {
         { name: "Find item 400", code: "data.find(x => x == 400)", ops: 55350 },
         { name: "Find item 800", code: "data.find(x => x == 800)", ops: 27660 },
     ],
+    dimension1Code: "[100,1000,10000]",
 }
 const setupWorker = ({code, onMessage}) => {
     const script = URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))
@@ -216,8 +217,8 @@ const app = () => {
                             
                             const runScript = setup({isCheckerScript:false})
                             const tasks = () => () => {
-                                dispatch(updateProgress)
-                                // dispatch((...args)=>updateProgress(...args, cycles))
+                                // dispatch(updateProgress)
+                                dispatch((...args)=>updateProgress(...args, cycles))
 
                                 // 
                                 // run
