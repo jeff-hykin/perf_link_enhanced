@@ -23,7 +23,7 @@ export const TestControls = ({ id, test, state, dispatch }) => {
 }
 
 export default ({ state, dispatch }) => {
-    const { suites, before, tests, id, title, started, dialog, dimension1Code, dimension2Code } = state
+    const { suites, globalCode, tests, id, title, started, dialog, dimension1Code, dimension2Code } = state
     const scaleMessagePrefix = (number)=>`const dimension${number} = `
     const scaleMessagePostfix = (number)=>`\n// ONLY edit the list^ contents\n// NOTE: values must be JSON-able\nconst dimension${number}Value = oneOf(dimension${number})\n// use this^ var in the globals section`
     return html`
@@ -56,7 +56,7 @@ export default ({ state, dispatch }) => {
                         const exists = Object.fromEntries(suites)[id]
                         const t = exists ? uid() : title || uid()
                         const key = exists ? uid() : id
-                        const data = { title: t, before, tests, updated: new Date() }
+                        const data = { title: t, globalCode, tests, updated: new Date() }
                         localStorage.setItem(key, JSON.stringify(data))
                         dispatch({ id: key, title, ...latestLocalStorage() })
                     }}
@@ -64,7 +64,7 @@ export default ({ state, dispatch }) => {
                     ${Object.fromEntries(suites)[id] ? html` <${ForkIcon} /> ` : html` <${SaveIcon} /> `}
                 </button>
             </div>
-            <${Editor} value=${before} disabled=${started} onValueChange=${(before) => dispatch({ before })} highlight=${highlightCode} padding=${20} style=${style.editor} />
+            <${Editor} value=${globalCode} disabled=${started} onValueChange=${(globalCode) => dispatch({ globalCode })} highlight=${highlightCode} padding=${20} style=${style.editor} />
             <div className=${style.testToolbar}>
                 <h3>Test Cases</h3>
                 <div>

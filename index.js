@@ -23,7 +23,14 @@ const defaults = {
     id: uid(),
     searchTerm: "",
     title: "Finding numbers",
-    before: `import { randomSelectElementAndIndex } from 'https://esm.sh/gh/jeff-hykin/good-js@1.17.1.0/source/flattened/random_select_element_and_index.js'\nconst data = [...Array(dimension1Value).keys()]\nconst { value: randomValue, index: randomIndex } = randomSelectElementAndIndex(data)`,
+    globalCode: `
+        import { randomInteger } from 'https://esm.sh/gh/jeff-hykin/good-js@1.17.2.0/source/flattened/random_integer.js'
+        import { randomSelectElementAndIndex } from 'https://esm.sh/gh/jeff-hykin/good-js@1.17.2.0/source/flattened/random_select_element_and_index.js'
+
+        const data = [...Array(dimension1Value).keys()]
+        const randomInt = randomInteger(1,10) // in
+        const { value: randomValue, index: randomIndex } = randomSelectElementAndIndex(data)
+    `.replace(/\n\s+/g,"\n"),
     tests: [
         { name: "Find item 100", code: "data.find(x => x == 100)", ops: 203360 },
         { name: "Find item 200", code: "data.find(x => x == 200)", ops: 99560 },
@@ -60,7 +67,7 @@ const reducer = (state, update) => ({
 
 const app = () => {
     const [state, dispatch] = useReducer(reducer, init)
-    const { before, started, tests, runs, title, id, suites, aside, dimension1Code, dimension2Code } = state
+    const { globalCode, started, tests, runs, title, id, suites, aside, dimension1Code, dimension2Code } = state
 
     useEffect(() => {
         if (started) {
@@ -89,7 +96,7 @@ const app = () => {
                     if (dim2Empty) {
                         dimension2 = [null]
                     }
-                    const {code:globalSectionCode, syntaxErrors} = convertImports(before)
+                    const {code:globalSectionCode, syntaxErrors} = convertImports(globalCode)
                     if (syntaxErrors.length > 0) {
                         showErrorToast(`Syntax errors in the global section:\n${syntaxErrors.map(x=>x.text).join("\n")}`)
                         return dispatch({ started: false })
@@ -119,66 +126,73 @@ const app = () => {
                                 }
                                 var require = (x) => import(x)
                                 let section = "globals"
-                                await eval(${JSON.stringify(`((async ()=>{
-                                    try {
-                                        ${globalSectionCode};
-                                        try {
-                                            if (isCheckerScript) {
-                                                callbackForTestRequest = (messageFromHost) => {
-                                                    const testObject = messageFromHost.data[0]
-                                                    let time
-                                                    ;(async () => {
-                                                        try {
-                                                            time = await eval(\`async () => {
-                                                                const start = performance.now()
-                                                                for (let i = 0; i < 10; i++) {
-                                                                    \${testObject.code};
-                                                                }
-                                                                return performance.now() - start || 1
-                                                            }\`)()
-                                                            postMessage(time)
-                                                        } catch (e) {
-                                                            postMessage({errorSection: "one of the test cases", errorMessage: \`\${e.message}\`, errorStack: \`\${e.stack}\`})
-                                                        }
-                                                    })()
-                                                }
-                                            // run script
-                                            } else {
-                                                callbackForTestRequest = (messageFromHost) => {
-                                                    const testObject = messageFromHost.data[0]
-                                                    const duration = messageFromHost.data[1]
-                                                    let result
-                                                    ;((async () => {
-                                                        try {
-                                                            result = await eval(\`async () => {
-                                                                let ops = 0;
-                                                                let end =  performance.now() + \${duration};
-                                                                while ( performance.now() < end) {
-                                                                    \${testObject.code};
-                                                                    ops++;
-                                                                }
-                                                                return ops;
-                                                            }\`)()
-                                                            postMessage((result * (1000 / duration)) << 0)
-                                                        } catch (e) {
-                                                            postMessage({errorSection: "one of the test cases", errorMessage: \`\${e.message}\`, errorStack: \`\${e.stack}\`})
-                                                        }
-                                                    })())
-                                                }
-                                            }
-                                        } catch (error) {
-                                            postMessage({errorSection: "one of the test cases", errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
-                                            return
-                                        }
-                                        section = "one of the test cases"
-                                        resolvePromiseOfCallbackSetup()
-                                    } catch (error) {
-                                        postMessage({errorSection: "globals", errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
-                                        return
-                                    }
-                                })())`)}).catch((error)=>{
-                                    postMessage({errorSection: section, errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
+                                globalThis.addEventListener('unhandledrejection', function(e) {
+                                    postMessage({errorSection: "unknown (unhandledrejection)", errorMessage: \`\${e.message||e.reason||e}\`, errorStack: \`\${e.stack||e}\`})
                                 })
+                                await (async ()=>{
+                                    try {
+                                        await eval(${JSON.stringify(`((async ()=>{
+                                            try {
+                                                ${globalSectionCode};
+                                                try {
+                                                    if (isCheckerScript) {
+                                                        callbackForTestRequest = (messageFromHost) => {
+                                                            const testObject = messageFromHost.data[0]
+                                                            let time
+                                                            ;(async () => {
+                                                                try {
+                                                                    time = await eval(\`async () => {
+                                                                        const start = performance.now()
+                                                                        for (let i = 0; i < 10; i++) {
+                                                                            \${testObject.code};
+                                                                        }
+                                                                        return performance.now() - start || 1
+                                                                    }\`)()
+                                                                    postMessage(time)
+                                                                } catch (e) {
+                                                                    postMessage({errorSection: "one of the test cases", errorMessage: \`\${e.message}\`, errorStack: \`\${e.stack}\`})
+                                                                }
+                                                            })()
+                                                        }
+                                                    // run script
+                                                    } else {
+                                                        callbackForTestRequest = (messageFromHost) => {
+                                                            const testObject = messageFromHost.data[0]
+                                                            const duration = messageFromHost.data[1]
+                                                            let result
+                                                            ;((async () => {
+                                                                try {
+                                                                    result = await eval(\`async () => {
+                                                                        let ops = 0;
+                                                                        let end =  performance.now() + \${duration};
+                                                                        while ( performance.now() < end) {
+                                                                            \${testObject.code};
+                                                                            ops++;
+                                                                        }
+                                                                        return ops;
+                                                                    }\`)()
+                                                                    postMessage((result * (1000 / duration)) << 0)
+                                                                } catch (e) {
+                                                                    postMessage({errorSection: "one of the test cases", errorMessage: \`\${e.message}\`, errorStack: \`\${e.stack}\`})
+                                                                }
+                                                            })())
+                                                        }
+                                                    }
+                                                } catch (error) {
+                                                    postMessage({errorSection: "one of the test cases", errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
+                                                    return
+                                                }
+                                                section = "one of the test cases"
+                                                resolvePromiseOfCallbackSetup()
+                                            } catch (error) {
+                                                postMessage({errorSection: "globals", errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
+                                                return
+                                            }
+                                        })())`)})
+                                    } catch (e) {
+                                        postMessage({errorSection: section, errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
+                                    } 
+                                })() 
                             `
                             const checkAndHandleWorkerError = (message) => {
                                 if (message.data?.errorMessage) {
@@ -188,7 +202,12 @@ const app = () => {
                                     } else {
                                         chop = numberOfLineBeforeEvalCode+16
                                     }
-                                    let stackFixed = ((message.data.errorStack||"").match(/:\d+:\d+$/gm)||"").at(-1).split(":").map((x,i)=>i==1?x-chop:x).slice(0,-2).join(":")
+                                    let stackFixed = ""
+                                    try {
+                                        stackFixed = ((message.data.errorStack||"").match(/:\d+:\d+$/gm)||"").at(-1).split(":").map((x,i)=>i==1?x-chop:x).slice(0,-2).join(":")
+                                    } catch (error) {
+                                        
+                                    }
                                     const error= "error: " + message.data.errorMessage+"\nfrom "+message.data.errorSection+stackFixed
                                     showErrorToast(error)
                                     dispatch({ started: false })
@@ -255,16 +274,16 @@ const app = () => {
                 })()
             }, 300)
         }
-    }, [started, before, tests, dimension1Code, dimension2Code])
+    }, [started, globalCode, tests, dimension1Code, dimension2Code])
 
     useEffect(() => {
-        const x = JSON.stringify({ id, title, before, tests, updated: new Date(), dimension1Code, dimension2Code })
+        const x = JSON.stringify({ id, title, globalCode, tests, updated: new Date(), dimension1Code, dimension2Code })
         history.replaceState(null, null, `#${encodeURIComponent(btoa(x))}`)
         if (Object.fromEntries(suites)[id]) {
             localStorage.setItem(id, x)
             dispatch(latestLocalStorage)
         }
-    }, [id, title, before, tests, dimension1Code, dimension2Code])
+    }, [id, title, globalCode, tests, dimension1Code, dimension2Code])
 
     useEffect(() => {
         const alt = (e) => (navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)

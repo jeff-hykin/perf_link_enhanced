@@ -9,13 +9,13 @@ import {
 
 import { RemoveIcon, SearchIcon, LinkIcon, ArchiveIcon } from './icons.js'
 
-const suite = (dispatch) => ([id, { title, before, tests, updated }]) =>
+const suite = (dispatch) => ([id, { title, globalCode, tests, updated }]) =>
   html`
     <li className=${style.item}>
       <div
         key=${id}
         onClick=${() =>
-          dispatch({ id, title, before, tests, aside: 'results' })}
+          dispatch({ id, title, globalCode, tests, aside: 'results' })}
       >
         <h4>${title}</h4>
         <small>
@@ -26,7 +26,7 @@ const suite = (dispatch) => ([id, { title, before, tests, updated }]) =>
         onClick=${() =>
           copyHashURL({
             title,
-            before,
+            globalCode,
             tests,
             updated: new Date(),
           })}

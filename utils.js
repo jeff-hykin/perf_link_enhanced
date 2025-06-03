@@ -102,7 +102,7 @@ export const extractValidSuites = (o) =>
     try {
       suite = JSON.parse(v)
     } catch (e) {}
-    return suite.before && suite.tests ? [...a, [k, suite]] : a
+    return suite.globalCode && suite.tests ? [...a, [k, suite]] : a
   }, [])
 
 export const startTesting = (state) => ({
@@ -179,7 +179,7 @@ export const decodeState = (encodedState) => {
     // V1
     return {
       title: '',
-      before: atob(location.hash.slice(1).split('/')[0]),
+      globalCode: atob(location.hash.slice(1).split('/')[0]),
       tests: JSON.parse(atob(location.hash.slice(1).split('/')[1])).map(
         ({ code }, testIndex) => {
           return {
