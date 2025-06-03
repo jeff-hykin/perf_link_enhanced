@@ -116,8 +116,8 @@ export const latestLocalStorage = () => ({
   suites: extractValidSuites(localStorage),
 })
 
-export const updateProgress = (state) => ({
-  progress: state.progress + state.tests.length,
+export const updateProgress = (state, cycles=1) => ({
+  progress: state.progress + state.tests.length/cycles,
 })
 
 const insertItemAtIndex = (arr, index, item) => [

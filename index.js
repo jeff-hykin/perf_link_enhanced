@@ -31,7 +31,15 @@ const defaults = {
         { name: "Find item 800", code: "data.find(x => x == 800)", ops: 27660 },
     ],
 }
-
+const setupWorker = ({code, onMessage}) => {
+    const script = URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))
+    const worker = new Worker(script, { type: "module" })
+    if (onMessage) {
+        worker.onmessage = onMessage
+    }
+    return worker
+}
+    
 // TODO:
     // fix % progress not being synced up across dim runs (show loading, clear old output): http://127.0.0.1:8080/#eyJpZCI6ImF6ODJ3eHhpaW1wIiwidGl0bGUiOiJDb21wYXJpc29uIG9mIHN0dWZmIiwiYmVmb3JlIjoiY29uc3QgZGF0YSA9IG5ldyBTZXQoWy4uLkFycmF5KGRpbWVuc2lvbjFWYWx1ZSkua2V5cygpXSkiLCJ0ZXN0cyI6W3sibmFtZSI6Im1hbnVhbCBPKG4pIiwiY29kZSI6ImNvbnN0IGEgPSBuZXcgU2V0KClcbmZvciAobGV0IGVhY2ggb2YgZGF0YSkge1xuICAgIGEuYWRkKGVhY2gpXG59XG5jb25zb2xlLmxvZyhcImEuc2l6ZVwiLCBhLnNpemUpIiwicnVucyI6WzE3MywxMzAsMTUyLDIxNywyMTcsMTk1LDE3MywyMTcsMTMwLDg2LDEwOCw4NiwxMzAsMTMwLDE1MiwxMzAsMTMwLDg2LDEzMCwxMDgsMTMwLDEwOCwxMDgsMTMwLDE1MiwxNzMsMTk1LDIxNywxMzAsMTk1LDIxNywxOTUsMTk1LDIxNywyMTcsMjE3LDIzOSwyMTcsMjM5LDIzOSwyMTcsMjM5LDIzOSwyMzksMjM5LDIzOSwyMzksMjM5LDIxNywyMzksMjM5LDIxNywyMzksMjM5LDIxNywyMzksMjM5LDIxNywyMzksMjM5LDIzOSwyMTcsMjM5LDIzOSwyMzksMjM5LDIzOSwyMTcsMjM5LDIzOSwyMTcsMjM5LDIzOSwyMTcsMjM5LDIzOSwyMzksMjM5LDIxNywyMzksMjM5LDIxNywyMTcsMjM5LDIzOSwyMTcsMjM5LDIxNywyMzksMjM5LDIzOSwyMzksMjE3LDIzOSwyMzksMjE3LDIzOSwyMzksMjE3LDIzOV0sIm9wcyI6MjA1fSx7Im5hbWUiOiJidWlsdGluIE8obikiLCJjb2RlIjoiY29uc3QgYiA9IG5ldyBTZXQoZGF0YSlcbmNvbnNvbGUubG9nKFwiYi5zaXplXCIsIGIuc2l6ZSkiLCJydW5zIjpbODQ3LDYwOCw3ODIsMTEwOCwxMDY1LDk1Niw3ODIsOTU2LDQzNCwyNjAsMzI2LDIxNyw0MTMsNTIxLDYzMCwzMDQsNTQzLDM0NywzNjksNDEzLDQ1Niw0MTMsMzkxLDU4Niw3MTcsODI2LDg0Nyw5MTMsNjczLDg5MSw5MTMsOTEzLDkxMywxMDAwLDExNzMsMTAwMCwxMTMwLDEwNjUsMTA2NSwxMTczLDEwNjUsMTEzMCwxMTczLDExNzMsMTEzMCwxMTczLDExNzMsMTE1MiwxMTUyLDExNzMsMTE3MywxMTMwLDExNzMsMTE3MywxMTA4LDExNzMsMTE3MywxMDg2LDExNzMsMTE1MiwxMTczLDExMzAsMTE5NSwxMTUyLDExNzMsMTE3MywxMjE3LDExNzMsMTE5NSwxMTMwLDEwMjEsMTE3MywxMTA4LDEwODYsMTE5NSwxMTMwLDExNzMsMTE3MywxMDg2LDExNzMsMTA4NiwxMDQzLDExMDgsMTE3MywxMTk1LDExMzAsMTIxNyw5NzgsMTE3MywxMTMwLDExNTIsMTE3MywxMDQzLDExMzAsMTEzMCwxMDAwLDExNzMsMTE3MywxMTMwLDExNzNdLCJvcHMiOjk3NH1dLCJ1cGRhdGVkIjoiMjAyNS0wNS0yNVQxMTo1NTo0My4xODlaIiwiZGltZW5zaW9uMUNvZGUiOiJbMTAsMTAwLDEwMDAsMTAwMDAsMTAwXzAwMCwxMDAwMDAwXSJ9
     // add error output
@@ -86,6 +94,7 @@ const app = () => {
                         return dispatch({ started: false })
                     }
                     let resultsPerCondition = []
+                    const cycles = dimension1.length * dimension2.length
                     for (const dimension1Value of dimension1) {
                         for (const dimension2Value of dimension2) {
                             const dimensionResults = []
@@ -94,8 +103,8 @@ const app = () => {
                                 dimensionResults,
                             ])
                             const numberOfLineBeforeEvalCode = 9
-                            const setup = ({isCheckScript=false})=>`
-                                const isCheckScript = ${JSON.stringify(isCheckScript)}
+                            const setup = ({isCheckerScript=false})=>`
+                                const isCheckerScript = ${JSON.stringify(isCheckerScript)}
                                 const dimension1Value = ${JSON.stringify(dimension1Value)}
                                 const dimension2Value = ${JSON.stringify(dimension2Value)}
                                 // setup onmessage hook immediately
@@ -113,18 +122,18 @@ const app = () => {
                                     try {
                                         ${globalSectionCode};
                                         try {
-                                            if (isCheckScript) {
+                                            if (isCheckerScript) {
                                                 callbackForTestRequest = (messageFromHost) => {
                                                     const testObject = messageFromHost.data[0]
                                                     let time
                                                     ;(async () => {
                                                         try {
                                                             time = await eval(\`async () => {
-                                                                const start = Date.now()
+                                                                const start = performance.now()
                                                                 for (let i = 0; i < 10; i++) {
                                                                     \${testObject.code};
                                                                 }
-                                                                return Date.now() - start || 1
+                                                                return performance.now() - start || 1
                                                             }\`)()
                                                             postMessage(time)
                                                         } catch (e) {
@@ -142,8 +151,8 @@ const app = () => {
                                                         try {
                                                             result = await eval(\`async () => {
                                                                 let ops = 0;
-                                                                let end = Date.now() + \${duration};
-                                                                while (Date.now() < end) {
+                                                                let end =  performance.now() + \${duration};
+                                                                while ( performance.now() < end) {
                                                                     \${testObject.code};
                                                                     ops++;
                                                                 }
@@ -170,10 +179,8 @@ const app = () => {
                                     postMessage({errorSection: section, errorMessage: \`\${error.message}\`, errorStack: \`\${error.stack}\`})
                                 })
                             `
-                            const checkScript = URL.createObjectURL(new Blob([setup({isCheckScript:true})], { type: 'application/javascript' }))
-                            const runScript = URL.createObjectURL(new Blob([setup({isCheckScript:false})], { type: 'application/javascript' }))
                             const checkAndHandleWorkerError = (message) => {
-                                if (message.data.errorMessage) {
+                                if (message.data?.errorMessage) {
                                     let chop 
                                     if (message.data.errorSection === "globals") {
                                         chop = numberOfLineBeforeEvalCode
@@ -184,38 +191,55 @@ const app = () => {
                                     const error= "error: " + message.data.errorMessage+"\nfrom "+message.data.errorSection+stackFixed
                                     showErrorToast(error)
                                     dispatch({ started: false })
-                                    throw Error(error)
+                                    return true
                                 }
                             }
-                            const durations = await Promise.all(
-                                tests.map(
-                                    (testObject) =>
-                                        new Promise((resolve) => {
-                                            const worker = new Worker(checkScript, { type: "module" })
-                                            worker.onmessage = (message) => {
-                                                checkAndHandleWorkerError(message)
-                                                resolve(message.data)
-                                                worker.terminate()
-                                            }
-                                            worker.postMessage([testObject])
-                                        })
-                                )
-                            )
+                            
+                            // 
+                            // check
+                            // 
+                            const checkerScript = setup({isCheckerScript:true})
+                            const checkerPromises = []
+                            for (const testObject of tests) {
+                                let checkerResolver
+                                let checkerPromise = new Promise((resolve) =>{ checkerResolver = resolve })
+                                checkerPromises.push(checkerPromise)
+                                const worker = setupWorker({code: checkerScript, onMessage: (message)=>{
+                                    if (!checkAndHandleWorkerError(message)) {
+                                        checkerResolver(message.data)
+                                    }
+                                    worker.terminate()
+                                }})
+                                worker.postMessage([testObject])
+                            }
+                            const durations = await Promise.all(checkerPromises)
+                            
+                            const runScript = setup({isCheckerScript:false})
                             const tasks = () => () => {
                                 dispatch(updateProgress)
-                                return Promise.all(tests.map((testObject) =>
-                                    new Promise((resolve) => {
-                                        const worker = new Worker(runScript, { type: "module" })
-                                        worker.onmessage = (message) => {
-                                            checkAndHandleWorkerError(message)
-                                            resolve({ ...testObject, ops: message.data })
-                                            worker.terminate()
+                                // dispatch((...args)=>updateProgress(...args, cycles))
+
+                                // 
+                                // run
+                                // 
+                                const runPromises = []
+                                for (const testObject of tests) {
+                                    let runResolver
+                                    let runPromise = new Promise((resolve) =>{ runResolver = resolve })
+                                    runPromises.push(runPromise)
+                                    const worker = setupWorker({code: runScript, onMessage: (message)=>{
+                                        if (!checkAndHandleWorkerError(message)) {
+                                            runResolver({ ...testObject, ops: message.data })
+                                            checkAndHandleWorkerError({ ...testObject, ops: message.data })
                                         }
-                                        // TODO: is max really the right metric here? -- Jeff
-                                        worker.postMessage([testObject, Math.max(...durations)])
-                                    })
-                                ))
+                                        worker.terminate()
+                                    }})
+                                    // TODO: is max really the right metric here? -- Jeff
+                                    worker.postMessage([testObject, Math.max(...durations)])
+                                }
+                                return Promise.all(runPromises)
                             }
+                            
                             pSeries(Array.from({ length: runs }, tasks)).then((results) =>{
                                 const testResults = average(results.flat())
                                 for (let each of testResults) {
